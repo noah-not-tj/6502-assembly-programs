@@ -12,7 +12,7 @@ define seed $08   ; currently just 1 byte
 
 define playerY $0a
 
-init_plat: 
+; init plat 
 lda #$aa
 sta plat0
 lda #$ea
@@ -21,25 +21,28 @@ sta plat2
 lda #$fe
 sta plat3
 
-init_seed:
+; init playerY
+lda #$80   
+sta playerY
+
+
+; init seed
 lda #%01100101
 sta seed
 
 lda #$02
 ldx #$20
 init_draw_plat:
-dex
-sta $0520,x 
-sta $0540,x
-sta $0560,x
-sta $0580,x
-sta $05a0,x
-sta $05c0,x
-sta $05e0,x
-cpx #$00
-bne init_draw_plat
-
-
+  dex
+  sta $0520,x 
+  sta $0540,x
+  sta $0560,x
+  sta $0580,x
+  sta $05a0,x
+  sta $05c0,x
+  sta $05e0,x
+  cpx #$00
+  bne init_draw_plat
 
 
 jmp end
@@ -97,7 +100,6 @@ update_platform:
   rts
 
 
-
 random_num:
   lda $fe
   cmp #$80
@@ -114,13 +116,43 @@ delay:
     dex
     bne del1
     rts
-  
 
+update_player:
+  lda playerY
+  cmp #$00
+  beq update_player_done
+  sec 
+  sbc #$20
+  sta playerY
+
+  update_player_done:
   rts
   
+draw_player:
+  ldx #$00
+  lda #$00
+  clear_top:
+    sta $03e0,x
+    tay               ; x: num     y: a    a: a
+    txa               ; x: num     y: a    a: x
+    clc
+    adc #$20
+    tax
+    tya
+    cpx #$80
+    bne clear_top
+    
+  
+  lda #$04
+  ldx playerY
+  sta $03e8,x
+  sta $0408,x
+  rts
 
 end:
-jsr draw_platform
 jsr update_platform
+jsr draw_platform
+jsr update_player
+jsr draw_player
 jsr delay
 jmp end
