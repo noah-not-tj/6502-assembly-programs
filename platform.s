@@ -8,20 +8,21 @@ define temp1 $05
 define temp2 $06
 define temp3 $07
 
-define playerY $04
+define seed $08   ; currently just 1 byte
+
+define playerY $0a
 
 lda #$aa
 sta plat0
-lda #$ff
+lda #$ea
 sta plat1
 sta plat2
-lda #$ff
+lda #$fe
 sta plat3
 
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
+lda #%01100101
+sta seed
+
 jmp end
 
 load_temp:
@@ -58,7 +59,10 @@ draw_platform:
 
   hole:
     lda #$00
-    sta $0200,x
+    sta $04a0,x
+    sta $04c0,x
+    sta $04e0,x
+    sta $0500,x
   nextbit:
     inx
     cpx #$20
@@ -66,23 +70,61 @@ draw_platform:
     rts
   
 update_platform:
-  lsr plat3
+  jsr random_num
+  ror plat3
   ror plat2
   ror plat1
   ror plat0
-  rts  
+  rts
+
+
+
+random_num:
+  lda seed
+  cmp #$80
+  rol seed
+  rts
+  
+
 
 delay:
-ldy $02
-ldx $02
-outer:	
-	prep:
-	ldx #$02
-	inner:
-	dex	
-	bne inner
-dey
-bne outer
-rts
+  ldx #$ff
+  del1:
+    lda #$00
+    sta $0201
+    dex
+    bne del1
+    rts
+  
+
+  rts
+  
 
 end:
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr update_platform
+jsr delay
+jsr draw_platform
+jsr draw_platform
