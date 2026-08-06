@@ -1,29 +1,25 @@
 define plat0 $00
 define plat1 $01
-define plat2 $02
-define plat3 $03
 
 define temp0 $04
 define temp1 $05
-define temp2 $06
-define temp3 $07
 
 define rand $fe
 
 define playerY $0a
 define maxY $0b
 
-define time $0c  ; two bytes 
-
+;init time
+lda #$00
+sta time
+sta lastPress
+sta lastkey
 
 ; init plat 
-lda #$aa
+lda #$ff
 sta plat0
-lda #$ea
+lda #$ff
 sta plat1
-sta plat2
-lda #$fe
-sta plat3
 
 ; init playerY
 lda #$80
@@ -52,10 +48,6 @@ load_temp:
   sta temp0
   lda plat1 
   sta temp1
-  lda plat2 
-  sta temp2
-  lda plat3 
-  sta temp3
   rts
 
 draw_platform:
@@ -63,9 +55,7 @@ draw_platform:
   ldx #$00
   
   platLoop:
-      lsr temp3    ; outputs into carry
-      ror temp2    ; input = carry
-      ror temp1    ; input = carry
+      lsr temp1    ; input = carry
       ror temp0    ; input = carry
   
       bcc hole
@@ -77,6 +67,14 @@ draw_platform:
       sta $04c0,x
       sta $04e0,x
       sta $0500,x
+    inx
+    lda #$05         
+    sta $04a0,x
+    lda #$02
+      sta $04c0,x
+      sta $04e0,x
+      sta $0500,x
+    
     jmp nextbit
 
   hole:
@@ -85,16 +83,20 @@ draw_platform:
     sta $04c0,x
     sta $04e0,x
     sta $0500,x
+    inx
+    lda #$00
+    sta $04a0,x
+    sta $04c0,x
+    sta $04e0,x
+    sta $0500,x
   nextbit:
     inx
-    cpx #$20
+    cpx #$20 
     bne platLoop
     rts
   
 update_platform:
   jsr random_num
-  ror plat3
-  ror plat2
   ror plat1
   ror plat0
   rts
@@ -113,16 +115,17 @@ delay:
   del1:
     lda #$03
     sta $0201
+    nop
     dex
     bne del1
     rts
 
 update_player:
   lda playerY
-  cmp #$00
+  cmp maxY
   beq update_player_done
-  sec 
-  sbc #$20
+  clc
+  adc #$20
   sta playerY
 
   update_player_done:
@@ -171,7 +174,27 @@ draw_player:
   
   player_done:
     rts
+ 
+readkey:
+  lda $ff
+  cmp #$77
+  beq jump
+
+keydone:
+  rts
   
+jump:
+  lda playerY
+  cmp #$00
+  beq keydone
+  sec
+  sbc #$60
+  sta playerY
+ 
+  lda #$00   ;reset key
+  sta $ff
+  rts  
+ 
 
 end:
 jsr update_platform
@@ -179,4 +202,7 @@ jsr draw_platform
 jsr update_player
 jsr draw_player
 jsr delay
+
+jsr readkey
+
 jmp end
