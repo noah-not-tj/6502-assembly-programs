@@ -8,9 +8,13 @@ define temp1 $05
 define temp2 $06
 define temp3 $07
 
-define seed $08   ; currently just 1 byte
+define rand $fe
 
 define playerY $0a
+define maxY $0b
+
+define time $0c  ; two bytes 
+
 
 ; init plat 
 lda #$aa
@@ -22,13 +26,9 @@ lda #$fe
 sta plat3
 
 ; init playerY
-lda #$80   
+lda #$80
+sta maxY
 sta playerY
-
-
-; init seed
-lda #%01100101
-sta seed
 
 lda #$02
 ldx #$20
@@ -101,7 +101,7 @@ update_platform:
 
 
 random_num:
-  lda $fe
+  lda rand
   cmp #$80
   rol
   rts
@@ -129,25 +129,49 @@ update_player:
   rts
   
 draw_player:
-  ldx #$00
-  lda #$00
+
+  ldx playerY
+  cpx #$00          ; if already at top don't clear top
+  beq draw_p
+  
+  ldx #$00     ; initial
+  lda #$00     ; color
   clear_top:
-    sta $03e0,x
+    sta $03e8,x    ; clear pixel
     tay               ; x: num     y: a    a: a
     txa               ; x: num     y: a    a: x
+    clc
+    adc #$20       ; increment counter by 1 row (32)
+    tax
+    tya
+    cpx playerY    ; check if it is at the height (draws height - 32)
+    bne clear_top
+    
+  draw_p:  
+    lda #$04
+    ldx playerY
+    sta $0408,x
+
+  cpx maxY            ; if at the bottom don't clear bottom
+  beq player_done
+  
+  lda #$00
+  ldx playerY                ; initial counter is playerY
+  clear_bottom:
+    tay
+    txa
     clc
     adc #$20
     tax
     tya
-    cpx #$80
-    bne clear_top
-    
+    sta $0408,x
+    cpx maxY
+    bne clear_bottom
   
-  lda #$04
-  ldx playerY
-  sta $03e8,x
-  sta $0408,x
-  rts
+  
+  player_done:
+    rts
+  
 
 end:
 jsr update_platform
