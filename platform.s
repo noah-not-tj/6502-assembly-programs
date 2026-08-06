@@ -1,8 +1,8 @@
 define plat0 $00
 define plat1 $01
 
-define temp0 $04
-define temp1 $05
+define temp0 $02
+define temp1 $03
 
 define rand $fe
 
@@ -137,17 +137,17 @@ draw_player:
   cpx #$00          ; if already at top don't clear top
   beq draw_p
   
-  ldx #$00     ; initial
-  lda #$00     ; color
+  ldx #$00      
+  lda #$00     
   clear_top:
-    sta $03e8,x    ; clear pixel
+    sta $0408,x    ; clear pixel
     tay               ; x: num     y: a    a: a
     txa               ; x: num     y: a    a: x
     clc
-    adc #$20       ; increment counter by 1 row (32)
+    adc #$20       
     tax
     tya
-    cpx playerY    ; check if it is at the height (draws height - 32)
+    cpx playerY    
     bne clear_top
     
   draw_p:  
