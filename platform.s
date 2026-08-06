@@ -12,6 +12,7 @@ define seed $08   ; currently just 1 byte
 
 define playerY $0a
 
+init_plat: 
 lda #$aa
 sta plat0
 lda #$ea
@@ -20,8 +21,26 @@ sta plat2
 lda #$fe
 sta plat3
 
+init_seed:
 lda #%01100101
 sta seed
+
+lda #$02
+ldx #$20
+init_draw_plat:
+dex
+sta $0520,x 
+sta $0540,x
+sta $0560,x
+sta $0580,x
+sta $05a0,x
+sta $05c0,x
+sta $05e0,x
+cpx #$00
+bne init_draw_plat
+
+
+
 
 jmp end
 
@@ -80,9 +99,9 @@ update_platform:
 
 
 random_num:
-  lda seed
+  lda $fe
   cmp #$80
-  rol seed
+  rol
   rts
   
 
@@ -90,7 +109,7 @@ random_num:
 delay:
   ldx #$ff
   del1:
-    lda #$00
+    lda #$03
     sta $0201
     dex
     bne del1
@@ -104,27 +123,4 @@ end:
 jsr draw_platform
 jsr update_platform
 jsr delay
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr update_platform
-jsr delay
-jsr draw_platform
-jsr draw_platform
+jmp end
