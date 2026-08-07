@@ -9,6 +9,10 @@ define rand $fe
 define playerY $0a
 define maxY $0b
 
+define playerColor $0c
+
+define doublejump $0d
+
 ;init time
 lda #$00
 sta time
@@ -21,10 +25,15 @@ sta plat0
 lda #$ff
 sta plat1
 
+lda #$00
+sta doublejump
+
 ; init playerY
 lda #$80
 sta maxY
 sta playerY
+lda #$04 
+sta playerColor
 
 lda #$02
 ldx #$20
@@ -123,13 +132,29 @@ delay:
 update_player:
   lda playerY
   cmp maxY
-  beq update_player_done
+  bne gravity
+  
+
+  lda $04a8
+  cmp #$00
+  bne skip_ameover
+  jmp gameover
+  skip_ameover:
+
+  lda #$00
+  sta doublejump
+
+  rts
+
+  
+  gravity:
   clc
   adc #$20
   sta playerY
-
-  update_player_done:
+  
+ 
   rts
+
   
 draw_player:
 
@@ -151,7 +176,7 @@ draw_player:
     bne clear_top
     
   draw_p:  
-    lda #$04
+    lda playerColor
     ldx playerY
     sta $0408,x
 
@@ -187,22 +212,46 @@ jump:
   lda playerY
   cmp #$00
   beq keydone
+
+  cmp #$40
+  bcc keydone
+  
+  lda doublejump
+  cmp #$01
+  beq keydone
+  
+  lda playerY
+  cmp maxY
+  beq j
+
+  lda #$01
+  sta doublejump
+
+  
+  j:
+  lda playerY
   sec
-  sbc #$60
+  sbc #$40
   sta playerY
  
   lda #$00   ;reset key
   sta $ff
+  
+
   rts  
  
 
 end:
 jsr update_platform
 jsr draw_platform
-jsr update_player
 jsr draw_player
-jsr delay
+jsr update_player
 
+
+
+jsr delay
 jsr readkey
 
 jmp end
+
+gameover:
