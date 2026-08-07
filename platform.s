@@ -4,6 +4,8 @@ define plat1 $01
 define temp0 $02
 define temp1 $03
 
+define time $04
+
 define rand $fe
 
 define playerY $0a
@@ -12,6 +14,7 @@ define maxY $0b
 define playerColor $0c
 
 define doublejump $0d
+
 
 ;init time
 lda #$00
@@ -120,6 +123,8 @@ random_num:
 
 
 delay:
+  ldy #$01
+  del2:
   ldx #$ff
   del1:
     lda #$03
@@ -127,7 +132,9 @@ delay:
     nop
     dex
     bne del1
-    rts
+  dey
+  bne del2
+  rts
 
 update_player:
   lda playerY
@@ -239,7 +246,17 @@ jump:
   
 
   rts  
- 
+  
+drawscore:
+  lda time
+  clc
+  adc #$01
+  sta time
+  
+  ldx time
+  lda #$06
+  sta $0200,x
+  rts 
 
 end:
 jsr update_platform
@@ -247,6 +264,7 @@ jsr draw_platform
 jsr draw_player
 jsr update_player
 
+; jsr drawscore
 
 
 jsr delay
@@ -255,3 +273,7 @@ jsr readkey
 jmp end
 
 gameover:
+  lda #$00
+  sta $0488
+  lda #$04
+  sta $0508
