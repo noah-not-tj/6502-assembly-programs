@@ -1,6 +1,5 @@
 define plat0 $00
 define plat1 $01
-
 define temp0 $02
 define temp1 $03
 
@@ -127,7 +126,7 @@ delay:
   del2:
   ldx #$ff
   del1:
-    lda #$03
+    lda #$00
     sta $0201
     nop
     dex
@@ -267,6 +266,7 @@ jsr update_player
 ; jsr drawscore
 
 
+
 jsr delay
 jsr readkey
 
@@ -276,4 +276,11 @@ gameover:
   lda #$00
   sta $0488
   lda #$04
+  sta $04a8
+  jsr delay
+  lda #$00
+  sta $04a8
+  lda #$04
   sta $0508
+  
+  
