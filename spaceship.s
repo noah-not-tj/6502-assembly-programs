@@ -31,7 +31,7 @@ sta enemy1_x
 
 lda #$00
 sta enemy3_y
-lda #$02
+lda #$00
 sta enemy2_y
 lda #$01
 sta enemy1_y
@@ -61,17 +61,20 @@ draw_bg:
   ldx #$18
   stx screenL
   jsr draw_bgCol
+  lda #$0e
+  ldx #$00  
+  stx screenL
   jsr draw_bottom_bg
+
+
   rts
 
 draw_bottom_bg:
   ldx #$05
   stx screenH
-  ldx #$00  
-  stx screenL
+
   
   ldy #$08
-  lda #$0e
   barL:
     sta (screenL),y
     iny
@@ -109,18 +112,51 @@ draw_bgCol:
 update_enemies:
   lda enemy1_y
   clc
-  adc enemy1_v 
+  adc enemy1_v
+  cmp #$19
+  bcs reset1  
   sta enemy1_y
+  jmp skipreset1
+
+  reset1:
+  lda #$01
+  sta enemy1_v
+  lda #$00
+  sta enemy1_y
+  
+  skipreset1:
   
   lda enemy2_y
   clc
-  adc enemy2_v 
+  adc enemy2_v
+  cmp #$19
+  bcs reset2  
+  sta enemy2_y
+  jmp skipreset2
+
+  reset2:
+  lda #$01
+  sta enemy2_v
+  lda #$00
   sta enemy2_y
   
+  skipreset2:
+ 
   lda enemy3_y
   clc
-  adc enemy3_v 
+  adc enemy3_v
+  cmp #$19
+  bcs reset3  
   sta enemy3_y
+  jmp skipreset3
+
+  reset3:
+  lda #$01
+  sta enemy3_v
+  lda #$00
+  sta enemy3_y
+  
+  skipreset3:
   rts
 
 ;input is in a reg, output page is in temp1, frac is in a reg
@@ -133,8 +169,6 @@ yval_to_screenval:
     bcc doneloopy    ; if a goes negative we are done
     
     inx 
-    cpx #$05         ; check if we are out of bounds
-    beq toofary
     jmp inLoop
     
   doneloopy:
@@ -147,11 +181,6 @@ yval_to_screenval:
     stx temp1
     rts
   
-  toofary:
-    lda #$00
-    ldx #$05
-    stx temp1
-    rts
 
 ; input = color in the a reg, also screenvars and y = enemyx
 draw_pixel:
@@ -198,9 +227,10 @@ draw_enemies:
   ldy enemy2_x
   ldx temp1
   stx screenH
+
   lda #$00
   jsr draw_pixel
-
+  
   lda enemy1_y            
   jsr yval_to_screenval 
   sta screenL
@@ -253,5 +283,11 @@ main:
   jsr update_enemies
   jsr draw_enemies
   jsr draw_player
+
+  lda #$0e
+  ldx #$00  
+  stx screenL
+  jsr draw_bottom_bg
   jsr delay
+
   jmp main
