@@ -66,7 +66,7 @@ draw_platform:
   ldx #$00
   
   platLoop:
-      lsr temp1    ; input = carry
+      lsr temp1    ; input = 0
       ror temp0    ; input = carry
   
       bcc hole
