@@ -135,6 +135,8 @@ update_enemies:
   reset1:
   lda #$01
   sta enemy1_v
+  lda #$fe
+  and #$02
   sta enemy1_y
   lda $fe
   and #$0f
@@ -155,7 +157,8 @@ update_enemies:
   reset2:
   lda #$01
   sta enemy2_v
-  lda #$00
+  lda #$fe
+  and #$02
   sta enemy2_y
   lda $fe
   and #$0f
@@ -176,7 +179,8 @@ update_enemies:
   reset3:
   lda #$01
   sta enemy3_v
-  lda #$00
+  lda #$fe
+  and #$02
   sta enemy3_y
   lda $fe
   and #$0f
@@ -315,7 +319,7 @@ gover:
 
 
 delay:
-  ldy #$01
+  ldy #$02
   del2:
   ldx speed
   del1:
@@ -326,7 +330,7 @@ delay:
   bne del2
   lda time
   clc
-  adc #$01
+  adc #$02
   sta time
   bcc dd
   lda time2
@@ -338,16 +342,13 @@ delay:
 draw_time:
   ldx time2
   lda time2
-  sta $0540,x
+  sta $0580,x
   rts
   
 
 read_key:
-  ldx player_x
-  cpx #$08
-  bcc keydone
-  cpx #$18
-  bcs keydone
+
+  
   lda $ff
   cmp #$61
   beq left
@@ -362,6 +363,8 @@ keydone:
     lda #$00
     jsr draw_player
     ldx player_x
+    cpx #$0a
+    bcc keydone
     dex
     stx player_x
     jmp dondye
@@ -370,6 +373,8 @@ keydone:
     lda #$00
     jsr draw_player
     ldx player_x
+    cpx #$16
+    bcs keydone
     inx 
     stx player_x
     jmp dondye
