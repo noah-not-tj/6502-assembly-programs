@@ -13,12 +13,19 @@ define player_x  $06
 define temp1     $07 
 define temp2     $08
 
-define screenL $09
-define screenH $0a
+define screenL   $09
+define screenH   $0a
 
-define enemy1_v $0b
-define enemy2_v $0c
-define enemy3_v $0d
+define enemy1_v  $0b
+define enemy2_v  $0c
+define enemy3_v  $0d
+ 
+define speed     $0e
+
+define time      $0f ; two bytes
+define time2     $10
+
+define gamedone  $11
 
 
 ; init
@@ -29,16 +36,15 @@ sta enemy2_x
 lda #$0e
 sta enemy1_x
 
-lda #$00
+lda #$0d
 sta enemy3_y
-lda #$00
+lda #$07
 sta enemy2_y
-lda #$01
+lda #$00
 sta enemy1_y
 
 lda #$01
 sta enemy3_v
-lda #$02
 sta enemy2_v
 sta enemy1_v
 
@@ -50,12 +56,20 @@ sta screenL
 lda #$02
 sta screenH
 
+lda #$02
+sta speed
+
+lda #$00
+sta time
+sta time2
+sta gamedone
+
 
 jsr draw_bg
 jmp main
 
 draw_bg:
-  ldx #$08
+  ldx #$07
   stx screenL
   jsr draw_bgCol
   ldx #$18
@@ -74,7 +88,7 @@ draw_bottom_bg:
   stx screenH
 
   
-  ldy #$08
+  ldy #$07
   barL:
     sta (screenL),y
     iny
@@ -121,8 +135,12 @@ update_enemies:
   reset1:
   lda #$01
   sta enemy1_v
-  lda #$00
   sta enemy1_y
+  lda $fe
+  and #$0f
+  clc
+  adc #$08 
+  sta enemy1_x
   
   skipreset1:
   
@@ -139,6 +157,11 @@ update_enemies:
   sta enemy2_v
   lda #$00
   sta enemy2_y
+  lda $fe
+  and #$0f
+  clc
+  adc #$08  
+  sta enemy2_x
   
   skipreset2:
  
@@ -155,6 +178,11 @@ update_enemies:
   sta enemy3_v
   lda #$00
   sta enemy3_y
+  lda $fe
+  and #$0f
+  clc
+  adc #$08 
+  sta enemy3_x
   
   skipreset3:
   rts
@@ -254,40 +282,124 @@ draw_enemies:
   rts
 
 draw_player:
-  lda #$04
   ldx player_x
+
+  pha
+  lda $0460,x
+  cmp #$01
+  beq gover
+  lda $047f,x
+  cmp #$01
+  beq gover
+  lda $0480,x
+  cmp #$01
+  beq gover
+  lda $0481,x
+  cmp #$01
+  beq gover
+
+  pla
+
+  sta $0460,x
+  sta $047f,x
   sta $0480,x
+  sta $0481,x
   rts
+
+gover:
+  pla
+  ldx #$ff
+  stx gamedone
+  rts
+  
 
 
 delay:
   ldy #$01
   del2:
-  ldx #$ff
+  ldx speed
   del1:
     lda #$00
-    nop
     dex
     bne del1
   dey
   bne del2
+  lda time
+  clc
+  adc #$01
+  sta time
+  bcc dd
+  lda time2
+  adc #$00
+  sta time2
+  dd:
   rts
+
+draw_time:
+  ldx time2
+  lda time2
+  sta $0540,x
+  rts
+  
+
+read_key:
+  ldx player_x
+  cpx #$08
+  bcc keydone
+  cpx #$18
+  bcs keydone
+  lda $ff
+  cmp #$61
+  beq left
+  cmp #$64
+  beq right
+keydone:
+  ldx #$00
+  stx $ff
+  rts
+
+  left: 
+    lda #$00
+    jsr draw_player
+    ldx player_x
+    dex
+    stx player_x
+    jmp dondye
+
+  right: 
+    lda #$00
+    jsr draw_player
+    ldx player_x
+    inx 
+    stx player_x
+    jmp dondye
+
+  dondye:
+    ldx #$00  
+    stx $ff
+    rts
   
   
 main:
-;  read_key
-;  clear enemies
-;  clear player
-;  update_player
-;  
+  jsr read_key
   jsr update_enemies
   jsr draw_enemies
+  lda #$04
   jsr draw_player
+
+  lda gamedone
+  cmp #$ff
+  beq gameoverhaha
 
   lda #$0e
   ldx #$00  
   stx screenL
   jsr draw_bottom_bg
+
+  jsr draw_time
   jsr delay
 
   jmp main
+
+gameoverhaha:
+  
