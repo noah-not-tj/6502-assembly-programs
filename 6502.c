@@ -26,18 +26,20 @@ CPU cpu;
 byte mem[MAX_MEMORY];
 
 
-
-void initMemory(){
+void init_memory(){
   for (int i = 0; i < MAX_MEMORY; i++) {
     mem[i] = 0x00;
   }
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
+  mem[0x0600] = 0xE8;
+  mem[0x0601] = 0xE8;
+  
   return;
   
 }
-void initCPU() {
+void reset_cpu() {
   cpu.PC = (mem[0xFFFD] << 8) + mem[0xFFFC];
   cpu.SP = 0x00;
   cpu.P |= I;
@@ -45,11 +47,41 @@ void initCPU() {
   return;
 }
 
+byte read_byte(word address) {
+  return mem[address];
+}
+
+void SB(byte op) {
+  switch (op)
+    case 0xE8:
+      cpu.X ++;
+      
+    
+  return;
+}
+
+void decode(byte op) {
+  if ((op & 0x0f) == 0x8) {
+    SB(op);
+  }
+  else return;
+}
+
+void execute() {
+  byte instruction = read_byte(cpu.PC);
+  decode(instruction);
+  cpu.PC ++;
+}
 
 
 int main(void) {
-  initMemory();
-  initCPU();
+  init_memory();
+  reset_cpu();
+  execute();
+  printf("%i", cpu.X);
+  execute();
+  printf("%i", cpu.X);
+
  
   return 0;
 }
