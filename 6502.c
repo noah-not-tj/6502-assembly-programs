@@ -29,6 +29,7 @@ void set_zero(byte x) {
   if (x == 0) {
     cpu.P |= Z;
   }
+  else { cpu.P &= ~Z; }
   return;
 }
 
@@ -36,6 +37,8 @@ void set_negative(byte x) {
   if (x >> 7 == 0x01) {
     cpu.P |= N;
   }
+  else { cpu.P &= ~N; }
+
   return;
 }
 
@@ -47,15 +50,19 @@ void init_memory(){
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
-  mem[0x0600] = 0xE8;
-  mem[0x0601] = 0xE8;
+  mem[0x0600] = 0xC8;  //iny
+  mem[0x0601] = 0x98;  //tya
+  mem[0x0602] = 0x48;  //pha
+  mem[0x0603] = 0xC8;  //iny
+  mem[0x0604] = 0x98;  //tya
+  mem[0x0605] = 0x68;  //pla
   
   return;
   
 }
 void reset_cpu() {
   cpu.PC = (mem[0xFFFD] << 8) + mem[0xFFFC];
-  cpu.SP = 0x00;
+  cpu.SP = 0xff;
   cpu.P |= I;
   cpu.A = cpu.X = cpu.Y = 0x00;
   return;
@@ -66,35 +73,90 @@ void cycle(int times) {
 
 byte read_byte(word address) {
   return mem[address];
-  cycle(2);   // idk
+  cycle(2);   
 }
 
-void SB(byte op) {
+void write_ZP(byte data, byte address) {
+  
+}
+
+
+void SB1(byte op) {
   switch ((op & 0xf0) >> 4) {
       
     case 0xF:        //sed
       cpu.P |= D;
-      cycle(2);
+      break;
     case 0xE:        //inx
       cpu.X ++;
       set_zero(cpu.X);
       set_negative(cpu.X);
-      cycle(2);
+      break;
     case 0xD:        //cld
       cpu.P &= ~D;
-      cycle(2);
-    case 0xC:
-    
-      
+      break;
+    case 0xC:        // iny
+      cpu.Y ++;
+      set_zero(cpu.Y);
+      set_negative(cpu.Y);
+      break;
+    case 0xB:       // clv
+      cpu.P &= ~V;
+      break;
+    case 0xA:       //tay
+      cpu.Y = cpu.A;
+      break;
+    case 0x9:       //tya
+      cpu.A = cpu.Y;
+      break;
+    case 0x8:       //dey
+      cpu.Y --;
+      set_zero(cpu.Y);
+      set_negative(cpu.Y);
+      break;
+    case 0x7:      //sei
+      cpu.P |= I;
+      break;
+    case 0x6:      //pla
+      cpu.A = read_byte(0x0100 + cpu.SP);
+      cpu.SP ++;
+      break;
+    case 0x05:    //cli
+      cpu.P &= ~I;
+      break;
+    case 0x04:    //pha
+      cpu.SP --;
+      mem[0x0100 + cpu.SP] = cpu.A;
+      cycle(1);
+      break;
+    case 0x03:   //sec
+      cpu.P |= C;
+      break;
+    case 0x02:   //plp
+      cpu.P = read_byte(0x0100 + cpu.SP);
+      cpu.SP ++;
+      break;
+    case 0x01:   //clc
+      cpu.P &= ~C;
+      break;
+    case 0x00:   //php
+      cpu.SP --;
+      mem[0x0100 + cpu.SP] = cpu.P;
   }
+  printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
     
+  cycle(2);
   return;
 }
 
 void decode(byte op) {
   if ((op & 0x0f) == 0x8) {
-    SB(op);
+    SB1(op);
   }
+  if ((op & 0x0f) == 0xA && (op & 0xf0) >> 4 > 0x08) {
+    //SB2(op);
+  }
+  
   else return;
 }
 
@@ -109,6 +171,10 @@ void execute() {
 int main(void) {
   init_memory();
   reset_cpu();
+  execute();
+  execute();
+  execute();
+  execute();
   execute();
   execute();
 
