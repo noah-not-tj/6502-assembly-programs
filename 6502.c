@@ -25,6 +25,20 @@ CPU cpu;
 
 byte mem[MAX_MEMORY];
 
+void set_zero(byte x) {
+  if (x == 0) {
+    cpu.P |= Z;
+  }
+  return;
+}
+
+void set_negative(byte x) {
+  if (x >> 7 == 0x01) {
+    cpu.P |= N;
+  }
+  return;
+}
+
 
 void init_memory(){
   for (int i = 0; i < MAX_MEMORY; i++) {
@@ -46,16 +60,33 @@ void reset_cpu() {
   cpu.A = cpu.X = cpu.Y = 0x00;
   return;
 }
+void cycle(int times) {
+  return;
+}
 
 byte read_byte(word address) {
   return mem[address];
+  cycle(2);   // idk
 }
 
 void SB(byte op) {
-  switch (op)
-    case 0xE8:
-      cpu.X ++;
+  switch ((op & 0xf0) >> 4) {
       
+    case 0xF:        //sed
+      cpu.P |= D;
+      cycle(2);
+    case 0xE:        //inx
+      cpu.X ++;
+      set_zero(cpu.X);
+      set_negative(cpu.X);
+      cycle(2);
+    case 0xD:        //cld
+      cpu.P &= ~D;
+      cycle(2);
+    case 0xC:
+    
+      
+  }
     
   return;
 }
@@ -71,6 +102,7 @@ void execute() {
   byte instruction = read_byte(cpu.PC);
   decode(instruction);
   cpu.PC ++;
+  printf("A: %i, X: %i, Y: %i, P: %08b\n", cpu.A, cpu.X, cpu.Y, cpu.P);
 }
 
 
@@ -78,9 +110,7 @@ int main(void) {
   init_memory();
   reset_cpu();
   execute();
-  printf("%i", cpu.X);
   execute();
-  printf("%i", cpu.X);
 
  
   return 0;
