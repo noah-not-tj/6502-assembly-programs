@@ -216,12 +216,45 @@ void SB2(byte op) {
   return;
 }
 
+void group1() {
+
+}
+
+void group2() {
+
+}
+void group2() {
+
+}
+
 void decode(byte op) {
   if ((op & 0x0f) == 0x8) {
     SB1(op);
   }
-  if ((op & 0x0f) == 0xA && ((op & 0xf0) >> 4) > 7) {
+  else if ((op & 0x0f) == 0xA && ((op & 0xf0) >> 4) > 7) {
     SB2(op);
+  }
+  else {
+    byte aaa = (op & 0xE0) >> 5;
+    byte bbb = (op & 0x1C) >> 2;
+    byte cc  = (op & 0x03);
+
+    switch (cc) {
+      case 0b01:
+        group1();
+
+      case 0b10:
+        group2();
+
+      case 0b11:
+        if (bbb == 4) {
+          //conditionals
+        } else if (bbb == 0 && (aaa & 0x04) >> 3 == 0x00) {
+          // I/S logic
+        } else {
+          group3();
+        }
+    }
   }
   
   else return;
