@@ -47,10 +47,13 @@ void init_memory(){
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
-  mem[0x0600] = 0xC8;  //iny
-  mem[0x0601] = 0x98;  //tya
-  mem[0x0602] = 0x0A;  //asl
-  mem[0x0603] = 0x2A;  //asl
+  mem[0x0600] = 0xC8; 
+  mem[0x0601] = 0x98; 
+  mem[0x0602] = 0x38; 
+  mem[0x0603] = 0x2A; 
+  mem[0x0604] = 0x48; 
+  mem[0x0605] = 0xBA; 
+  mem[0x0606] = 0xCA; 
 
   
   return;
@@ -76,6 +79,9 @@ void write_ZP(byte data, byte address) {
   
 }
 
+void set_carry() {
+  cpu.P |= C;
+}
 
 void SB1(byte op) {
   switch ((op & 0xf0) >> 4) {
@@ -126,7 +132,7 @@ void SB1(byte op) {
       cycle(1);
       break;
     case 0x03:   //sec
-      cpu.P |= C;
+      set_carry();
       break;
     case 0x02:   //plp
       cpu.P = read_byte(0x0100 + cpu.SP);
@@ -139,7 +145,7 @@ void SB1(byte op) {
       cpu.SP --;
       mem[0x0100 + cpu.SP] = cpu.P;
   }
-  printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
+  //printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
     
   cycle(2);
   return;
@@ -147,17 +153,17 @@ void SB1(byte op) {
 
 void SB2(byte op) {
   switch ((op & 0xf0) >> 4) {
-    case 0x00:
+    case 0x00:   // asl
       if ((cpu.A >> 7) == 0x01) {
-        cpu.SP |= C;
+        set_carry();
       }
       cpu.A = cpu.A << 1;
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0x02: 
+    case 0x02:  // rol
       if ((cpu.A >> 7) == 0x01) {
-        cpu.SP |= C;
+        set_carry();
       }
       cpu.A = cpu.A << 1;
       if (cpu.SP & C == 0x01) {
@@ -166,11 +172,46 @@ void SB2(byte op) {
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0x04:
+    case 0x04:  //lsr
+      if (cpu.A & 0x01 == 0x01) {
+        set_carry();
+      }
+      cpu.A = cpu.A >> 1;
       break;
+
+    case 0x06:  //ror
+      byte wait;
+      if (cpu.A & 0x01 == 0x01) {
+        wait = 0x01;
+      }
+      cpu.A = cpu.A >> 1;
+      cpu.A += (cpu.P & C) << 7;
+      if (wait == 0x01) { set_carry(); }
+      break;
+
+    case 0x08: //txa
+      cpu.A = cpu.X;
+      break;
+    case 0x09: //txs
+      cpu.SP = cpu.X;
+      break;
+    case 0x0a: //tax
+      cpu.X = cpu.A;
+      break;
+    case 0x0b: //tsx
+      cpu.X = cpu.SP;
+      break;
+    case 0x0c: //dex
+      cpu.X --;
+      set_zero(cpu.X);
+      set_negative(cpu.X);
+      break;
+    case 0x0e: //nop
+      break;
+
   }
   cycle(2);
-  printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
+  //printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
 
   return;
 }
@@ -179,7 +220,7 @@ void decode(byte op) {
   if ((op & 0x0f) == 0x8) {
     SB1(op);
   }
-  if ((op & 0x0f) == 0xA) {
+  if ((op & 0x0f) == 0xA && ((op & 0xf0) >> 4) > 7) {
     SB2(op);
   }
   
@@ -190,7 +231,9 @@ void execute() {
   byte instruction = read_byte(cpu.PC);
   decode(instruction);
   cpu.PC ++;
-  printf("A: %08b, X: %i, Y: %i, P: %08b\n", cpu.A, cpu.X, cpu.Y, cpu.P);
+  printf("A: %08b, X: %i, Y: %i,\n\n", cpu.A, cpu.X, cpu.Y);
+  printf("NV BDIZC\n");
+  printf("%08b\n\n", cpu.P);
 }
 
 
@@ -199,7 +242,9 @@ int main(void) {
   reset_cpu();
   execute();
   execute();
-  cpu.A = 0xff;
+  execute();
+  execute();
+  execute();
   execute();
   execute();
 
