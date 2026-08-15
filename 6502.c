@@ -29,7 +29,6 @@ void set_zero(byte x) {
   if (x == 0) {
     cpu.P |= Z;
   }
-  else { cpu.P &= ~Z; }
   return;
 }
 
@@ -37,8 +36,6 @@ void set_negative(byte x) {
   if (x >> 7 == 0x01) {
     cpu.P |= N;
   }
-  else { cpu.P &= ~N; }
-
   return;
 }
 
@@ -52,10 +49,9 @@ void init_memory(){
   
   mem[0x0600] = 0xC8;  //iny
   mem[0x0601] = 0x98;  //tya
-  mem[0x0602] = 0x48;  //pha
-  mem[0x0603] = 0xC8;  //iny
-  mem[0x0604] = 0x98;  //tya
-  mem[0x0605] = 0x68;  //pla
+  mem[0x0602] = 0x0A;  //asl
+  mem[0x0603] = 0x2A;  //asl
+
   
   return;
   
@@ -149,12 +145,42 @@ void SB1(byte op) {
   return;
 }
 
+void SB2(byte op) {
+  switch ((op & 0xf0) >> 4) {
+    case 0x00:
+      if ((cpu.A >> 7) == 0x01) {
+        cpu.SP |= C;
+      }
+      cpu.A = cpu.A << 1;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      break;
+    case 0x02: 
+      if ((cpu.A >> 7) == 0x01) {
+        cpu.SP |= C;
+      }
+      cpu.A = cpu.A << 1;
+      if (cpu.SP & C == 0x01) {
+        cpu.A ++;
+      }
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      break;
+    case 0x04:
+      break;
+  }
+  cycle(2);
+  printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
+
+  return;
+}
+
 void decode(byte op) {
   if ((op & 0x0f) == 0x8) {
     SB1(op);
   }
-  if ((op & 0x0f) == 0xA && (op & 0xf0) >> 4 > 0x08) {
-    //SB2(op);
+  if ((op & 0x0f) == 0xA) {
+    SB2(op);
   }
   
   else return;
@@ -164,7 +190,7 @@ void execute() {
   byte instruction = read_byte(cpu.PC);
   decode(instruction);
   cpu.PC ++;
-  printf("A: %i, X: %i, Y: %i, P: %08b\n", cpu.A, cpu.X, cpu.Y, cpu.P);
+  printf("A: %08b, X: %i, Y: %i, P: %08b\n", cpu.A, cpu.X, cpu.Y, cpu.P);
 }
 
 
@@ -173,10 +199,10 @@ int main(void) {
   reset_cpu();
   execute();
   execute();
+  cpu.A = 0xff;
   execute();
   execute();
-  execute();
-  execute();
+
 
  
   return 0;
