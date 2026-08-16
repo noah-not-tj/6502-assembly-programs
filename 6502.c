@@ -47,13 +47,9 @@ void init_memory(){
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
-  mem[0x0600] = 0xC8; 
-  mem[0x0601] = 0x98; 
-  mem[0x0602] = 0x38; 
-  mem[0x0603] = 0x2A; 
-  mem[0x0604] = 0x48; 
-  mem[0x0605] = 0xBA; 
-  mem[0x0606] = 0xCA; 
+  mem[0x0000] = 0xFF;
+  mem[0x0600] = 0x05;
+  mem[0x0601] = 0x00;
 
   
   return;
@@ -284,8 +280,10 @@ void group1(byte aaa, byte bbb) {
   }
    // group 1 instrucion
    byte val = o.is_immediate ? o.value : read_byte(o.EA);
+   printf("%x\n",val);
    switch (aaa) {
     case 0b000: //ORA
+      printf("or\n");
       cpu.A |= val;
       set_zero(cpu.A);
       set_negative(cpu.A);
@@ -351,10 +349,13 @@ void decode(byte op) {
 
     switch (cc) {
       case 0b01:
+        printf("opcode recieved: %x\n",op);
         group1(aaa, bbb);
+        break;
 
       case 0b10:
         group2();
+        break;
 
       case 0b11:
         if (bbb == 4) {
@@ -364,6 +365,7 @@ void decode(byte op) {
         } else {
           group3();
         }
+        break;
     }
   }
   
@@ -382,12 +384,6 @@ void execute() {
 int main(void) {
   init_memory();
   reset_cpu();
-  execute();
-  execute();
-  execute();
-  execute();
-  execute();
-  execute();
   execute();
 
 
