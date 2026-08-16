@@ -440,8 +440,36 @@ void group2(byte aaa, byte bbb) {
       break;
     }
   }
+  byte val = o.is_immediate ? o.value : read_byte(o.EA); 
 
-  
+  switch (aaa) {
+    case 0b000: { //asl
+
+    }
+    case 0b001: {//rol
+
+    }
+    case 0b010: {//lsr
+
+    }
+    case 0b011: {//ror
+
+    }
+    case 0b100: {//stx / txa   ?not sure
+
+    }
+    case 0b101: {//ldx
+
+    }
+    case 0b110: {//dec
+
+    }
+    case 0b111: {//inc
+
+    }
+  }
+
+
 }
 void group3() {
 
