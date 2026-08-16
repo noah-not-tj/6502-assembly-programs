@@ -236,56 +236,104 @@ typedef struct {
 
 void group1(byte aaa, byte bbb) {
   Opcode o = {0};
+  // group one addressing modes
   switch (bbb) {
-    case 0b000:  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
+    case 0b000: {  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
       byte zp = read_next() + cpu.X;
       word low = read_byte(zp);
       word high = read_byte(zp + 1);
       o.EA = (high << 8) | low;      
       break;
-
-    case 0b001:  //zero page         $zp
+    }
+    case 0b001: {  //zero page         $zp
       o.EA = read_next();
       break;
-
-    case 0b010:  //immediate         #immediate
+    }
+    case 0b010: {  //immediate         #immediate
       o.value = read_next();
       o.is_immediate = 0xff;
       break;
-
-    case 0b011:  //Absolue           $absolute
+    }
+    case 0b011: {  //Absolue           $absolute
       o.EA = read_next_word();
       break;
-      
-    case 0b100:  //indirect indexed  (Indirect),Y    (zp,low zp+1,high  )+y
+    }  
+    case 0b100: {  //indirect indexed  (Indirect),Y    (zp,low zp+1,high  )+y
       byte zp = read_next();
       byte low = read_byte(zp);
       byte high = read_byte(zp + 1);      
       o.EA = ((high << 8) | low) + (word)cpu.Y;
       break;
-
-    case 0b101:  //zero page,X       $zp,X
+    }
+    
+    case 0b101: {  //zero page,X       $zp,X
       byte zp = read_next() + cpu.X;
       o.EA = (word)zp; 
       break;
-
-    case 0b110:  //Absolute,Y        $abs,Y
+    }
+    case 0b110: {  //Absolute,Y        $abs,Y
       word address = read_next_word();
       o.EA = address + (word)cpu.Y;
       break;
-
-    case 0b111:  //Absolute,X        $abs,X
+    }
+    case 0b111: {  //Absolute,X        $abs,X
       word address = read_next_word();
       o.EA = address + (word)cpu.X;
       break;
-    
+    }
   }
+   // group 1 instrucion
+   byte val = o.is_immediate ? o.value : read_byte(o.EA);
+   switch (aaa) {
+    case 0b000: //ORA
+      cpu.A |= val;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      break;
+    case 0b001: //AND
+      cpu.A &= val;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      break;
+    case 0b010: //EOR
+      cpu.A ^= val;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      break;
+    case 0b011: //ADC
+      int temp = cpu.A + val; 
+      temp = (cpu.P & C) ? (temp + 1) :  temp;
+      if (temp > 0xFF) {
+        set_carry();
+      } else { cpu.P &= ~C; }
+
+      byte result = (byte)temp;
+
+      if (((cpu.A ^ result) & (val ^ result) & 0x80) != 0x00) {
+        cpu.P |= V;
+      } else { cpu.P &= ~V; }
+
+      cpu.A = result;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      
+      break;
+    case 0b100: //STA
+      break;
+    case 0b101: //LDA
+      break;
+    case 0b110: //CMP
+      break;
+    case 0b111: //SBC
+      break;
+   }
+
 }
 
 void group2() {
 
 }
-void group2() {
+void group3() {
 
 }
 
@@ -319,7 +367,7 @@ void decode(byte op) {
     }
   }
   
-  else return;
+  return;
 }
 
 void execute() {
