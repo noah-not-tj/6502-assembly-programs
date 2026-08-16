@@ -44,12 +44,20 @@ void init_memory(){
   for (int i = 0; i < MAX_MEMORY; i++) {
     mem[i] = 0x00;
   }
+
+  //sus
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
-  mem[0x0000] = 0xFF;
-  mem[0x0600] = 0x05;
-  mem[0x0601] = 0x00;
+  mem[0x0000] = 0x01;
+  mem[0x0001] = 0x02;
+
+  mem[0x0202] = 0xff;
+  mem[0x0600] = 0xc8;
+
+  mem[0x0601] = 0xb1;   //lda indirect indexed
+
+
 
   
   return;
@@ -64,6 +72,11 @@ void reset_cpu() {
 }
 void cycle(int times) {
   return;
+}
+
+void write_byte(word address, byte value) {
+  cycle(2);
+  mem[address] = value;
 }
 
 byte read_byte(word address) {
@@ -280,10 +293,9 @@ void group1(byte aaa, byte bbb) {
   }
    // group 1 instrucion
    byte val = o.is_immediate ? o.value : read_byte(o.EA);
-   printf("%x\n",val);
+   printf("value: %x\n",val);
    switch (aaa) {
     case 0b000: //ORA
-      printf("or\n");
       cpu.A |= val;
       set_zero(cpu.A);
       set_negative(cpu.A);
@@ -299,6 +311,7 @@ void group1(byte aaa, byte bbb) {
       set_negative(cpu.A);
       break;
     case 0b011: //ADC
+      printf("adc");
       int temp = cpu.A + val; 
       temp = (cpu.P & C) ? (temp + 1) :  temp;
       if (temp > 0xFF) {
@@ -314,15 +327,27 @@ void group1(byte aaa, byte bbb) {
       cpu.A = result;
       set_zero(cpu.A);
       set_negative(cpu.A);
-      
       break;
     case 0b100: //STA
+      write_byte(o.EA, cpu.A);
       break;
     case 0b101: //LDA
+      cpu.A = val;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
       break;
     case 0b110: //CMP
+      if (cpu.A == val) {
+        cpu.P |= Z;
+      } else { cpu.P &= ~Z; } 
+
+      if (cpu.A >= val) {
+        cpu.P |= C;
+      } else { cpu.P &= ~C; } 
+      set_negative(cpu.A);
       break;
     case 0b111: //SBC
+      //todo
       break;
    }
 
@@ -336,6 +361,7 @@ void group3() {
 }
 
 void decode(byte op) {
+  printf("opcode recieved: %x\n",op);
   if ((op & 0x0f) == 0x8) {
     SB1(op);
   }
@@ -349,7 +375,6 @@ void decode(byte op) {
 
     switch (cc) {
       case 0b01:
-        printf("opcode recieved: %x\n",op);
         group1(aaa, bbb);
         break;
 
@@ -384,7 +409,10 @@ void execute() {
 int main(void) {
   init_memory();
   reset_cpu();
-  execute();
+  while (mem[cpu.PC] != 0x00) {
+    printf("----------------------------\n");
+    execute();
+  };
 
 
  
