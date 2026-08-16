@@ -49,15 +49,20 @@ void init_memory(){
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
-  mem[0x0000] = 0x01;
-  mem[0x0001] = 0x02;
+  mem[0x0005] = 0x01;
+  mem[0x0006] = 0x02;
 
-  mem[0x0202] = 0xff;
-  mem[0x0600] = 0xc8;
+  mem[0x0201] = 0xff;
 
-  mem[0x0601] = 0xb1;   //lda indirect indexed
+  mem[0x0600] = 0xe8; //inx
+  mem[0x0601] = 0xa9; //lda immediate
+  mem[0x0602] = 0xff; //immediate
 
+  mem[0x0603] = 0x38; //sec
+  mem[0x0604] = 0xe1; //sbc xindexed indirect
+  mem[0x0605] = 0x04; //zp
 
+//expected: x = 1, a = 0
 
   
   return;
@@ -241,6 +246,7 @@ typedef struct {
   word EA;
   byte value;
   byte is_immediate;
+  byte is_accumulator;
 } Opcode;
 
 void group1(byte aaa, byte bbb) {
@@ -295,30 +301,32 @@ void group1(byte aaa, byte bbb) {
    byte val = o.is_immediate ? o.value : read_byte(o.EA);
    printf("value: %x\n",val);
    switch (aaa) {
-    case 0b000: //ORA
+    case 0b000: { //ORA
       cpu.A |= val;
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0b001: //AND
+    }
+    case 0b001: {//AND
       cpu.A &= val;
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0b010: //EOR
+    }
+    case 0b010: {//EOR
       cpu.A ^= val;
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0b011: //ADC
-      printf("adc");
-      int temp = cpu.A + val; 
-      temp = (cpu.P & C) ? (temp + 1) :  temp;
+    }
+    case 0b011: {//ADC
+      word carry_in = (cpu.P & C) ? 1 : 0;
+      word temp = (word)cpu.A + (word)val + carry_in; 
       if (temp > 0xFF) {
         set_carry();
       } else { cpu.P &= ~C; }
 
-      byte result = (byte)temp;
+      byte result = (byte)(temp & 0xFF);
 
       if (((cpu.A ^ result) & (val ^ result) & 0x80) != 0x00) {
         cpu.P |= V;
@@ -328,15 +336,18 @@ void group1(byte aaa, byte bbb) {
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0b100: //STA
+    }
+    case 0b100: {//STA
       write_byte(o.EA, cpu.A);
       break;
-    case 0b101: //LDA
+    }
+    case 0b101: {//LDA
       cpu.A = val;
       set_zero(cpu.A);
       set_negative(cpu.A);
       break;
-    case 0b110: //CMP
+    }
+    case 0b110: {//CMP
       if (cpu.A == val) {
         cpu.P |= Z;
       } else { cpu.P &= ~Z; } 
@@ -346,15 +357,91 @@ void group1(byte aaa, byte bbb) {
       } else { cpu.P &= ~C; } 
       set_negative(cpu.A);
       break;
-    case 0b111: //SBC
-      //todo
-      break;
-   }
+    }
+    case 0b111: {//SBC
+      // A + ~M + C
+      word inverted = (~val) & 0xFF;
 
+      word carry_in = (cpu.P & C) ? 1 : 0;
+      word temp = (word)cpu.A + (word)inverted + carry_in;
+
+      if (temp > 0xFF) {
+        set_carry();
+      } else { cpu.P &= ~C; }
+
+      byte result = (byte)(temp & 0xFF);
+
+      if (((cpu.A ^ result) & (inverted ^ result) & 0x80) != 0x00) {
+        cpu.P |= V;
+      } else { cpu.P &= ~V; }
+
+      cpu.A = result;
+      set_zero(cpu.A);
+      set_negative(cpu.A);
+      break;
+    }
+  }
 }
 
-void group2() {
+void group2(byte aaa, byte bbb) {
+  Opcode o = {0};
+  switch (bbb) {
+    case 0b000: {//Immediate [exeption for stx, dec, inc]
+      // check for ldx
+      if (aaa == 0b101) {
+        o.value = read_next();
+        o.is_immediate = 0xff;
+        break;
+      }
+      // txa
+      if (aaa == 0b100) {
+        break; //(implied)
+      }
+      break;
+    }
+    case 0b001: {//zp
+      o.EA = (word)read_next();
+      break;
+    }
+    case 0b010: {//A
+      o.is_accumulator = 0xff;
+      break;
+    }
+    case 0b011: {//absolute 
+      o.EA = read_next_word();
+      break;
+    }
+    case 0b100: {//unused
+      break;
+    }
+    case 0b101: {// zero page X, Y - STX LDX use Y
+      // check if stx or ldx 
+      byte zp = read_next();
+      if (aaa == 0b100 || aaa == 0b101) {
+        o.EA = (word)((zp + cpu.Y) & 0xFF);
+        break;
+      }
+      o.EA = (word)((zp + cpu.X) & 0xFF);
+      break;
+    }
+    case 0b110: {//unused
+      break;
+    }
+    case 0b111: {//absolute x
+      word abs = read_next_word();
+      // check for ldx
+      if (aaa == 0b101) {
+        abs += (word)cpu.Y;
+        o.EA = abs;
+        break;
+      }
+      abs += (word)cpu.X;
+      o.EA = abs;
+      break;
+    }
+  }
 
+  
 }
 void group3() {
 
