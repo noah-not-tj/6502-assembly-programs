@@ -71,12 +71,24 @@ void cycle(int times) {
 }
 
 byte read_byte(word address) {
-  return mem[address];
   cycle(2);   
+  return mem[address];
 }
 
-void write_ZP(byte data, byte address) {
-  
+byte read_next() {
+  return read_byte(cpu.PC++);
+}
+
+word read_word(word address) {
+  word low = read_byte(address);
+  word high = read_byte(address + 1);
+  return (high << 8) | low;
+}
+
+word read_next_word() {
+  word low = read_byte(cpu.PC++);
+  word high = read_byte(cpu.PC++);
+  return (high << 8) | low;
 }
 
 void set_carry() {
@@ -216,8 +228,58 @@ void SB2(byte op) {
   return;
 }
 
-void group1() {
+typedef struct {
+  word EA;
+  byte value;
+  byte is_immediate;
+} Opcode;
 
+void group1(byte aaa, byte bbb) {
+  Opcode o = {0};
+  switch (bbb) {
+    case 0b000:  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
+      byte zp = read_next() + cpu.X;
+      word low = read_byte(zp);
+      word high = read_byte(zp + 1);
+      o.EA = (high << 8) | low;      
+      break;
+
+    case 0b001:  //zero page         $zp
+      o.EA = read_next();
+      break;
+
+    case 0b010:  //immediate         #immediate
+      o.value = read_next();
+      o.is_immediate = 0xff;
+      break;
+
+    case 0b011:  //Absolue           $absolute
+      o.EA = read_next_word();
+      break;
+      
+    case 0b100:  //indirect indexed  (Indirect),Y    (zp,low zp+1,high  )+y
+      byte zp = read_next();
+      byte low = read_byte(zp);
+      byte high = read_byte(zp + 1);      
+      o.EA = ((high << 8) | low) + (word)cpu.Y;
+      break;
+
+    case 0b101:  //zero page,X       $zp,X
+      byte zp = read_next() + cpu.X;
+      o.EA = (word)zp; 
+      break;
+
+    case 0b110:  //Absolute,Y        $abs,Y
+      word address = read_next_word();
+      o.EA = address + (word)cpu.Y;
+      break;
+
+    case 0b111:  //Absolute,X        $abs,X
+      word address = read_next_word();
+      o.EA = address + (word)cpu.X;
+      break;
+    
+  }
 }
 
 void group2() {
@@ -241,7 +303,7 @@ void decode(byte op) {
 
     switch (cc) {
       case 0b01:
-        group1();
+        group1(aaa, bbb);
 
       case 0b10:
         group2();
@@ -261,9 +323,8 @@ void decode(byte op) {
 }
 
 void execute() {
-  byte instruction = read_byte(cpu.PC);
+  byte instruction = read_byte(cpu.PC++);
   decode(instruction);
-  cpu.PC ++;
   printf("A: %08b, X: %i, Y: %i,\n\n", cpu.A, cpu.X, cpu.Y);
   printf("NV BDIZC\n");
   printf("%08b\n\n", cpu.P);
