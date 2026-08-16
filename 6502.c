@@ -49,18 +49,13 @@ void init_memory(){
   mem[0xFFFC] = 0x00;  
   mem[0xFFFD] = 0x06;  
   
-  mem[0x0005] = 0x01;
-  mem[0x0006] = 0x02;
+  mem[0x0600] = 0xa9; //lda immediate
+  mem[0x0601] = 0x55; //immediate
+  mem[0x0602] = 0x6a; //ror accumulator
+  mem[0x0603] = 0x6a; //ror accumulator
+  mem[0x0604] = 0x6a; //ror accumulator
+  mem[0x0605] = 0x6a; //ror accumulator
 
-  mem[0x0201] = 0xff;
-
-  mem[0x0600] = 0xe8; //inx
-  mem[0x0601] = 0xa9; //lda immediate
-  mem[0x0602] = 0xff; //immediate
-
-  mem[0x0603] = 0x38; //sec
-  mem[0x0604] = 0xe1; //sbc xindexed indirect
-  mem[0x0605] = 0x04; //zp
 
 //expected: x = 1, a = 0
 
@@ -179,42 +174,6 @@ void SB1(byte op) {
 
 void SB2(byte op) {
   switch ((op & 0xf0) >> 4) {
-    case 0x00:   // asl
-      if ((cpu.A >> 7) == 0x01) {
-        set_carry();
-      }
-      cpu.A = cpu.A << 1;
-      set_zero(cpu.A);
-      set_negative(cpu.A);
-      break;
-    case 0x02:  // rol
-      if ((cpu.A >> 7) == 0x01) {
-        set_carry();
-      }
-      cpu.A = cpu.A << 1;
-      if (cpu.SP & C == 0x01) {
-        cpu.A ++;
-      }
-      set_zero(cpu.A);
-      set_negative(cpu.A);
-      break;
-    case 0x04:  //lsr
-      if (cpu.A & 0x01 == 0x01) {
-        set_carry();
-      }
-      cpu.A = cpu.A >> 1;
-      break;
-
-    case 0x06:  //ror
-      byte wait;
-      if (cpu.A & 0x01 == 0x01) {
-        wait = 0x01;
-      }
-      cpu.A = cpu.A >> 1;
-      cpu.A += (cpu.P & C) << 7;
-      if (wait == 0x01) { set_carry(); }
-      break;
-
     case 0x08: //txa
       cpu.A = cpu.X;
       break;
@@ -444,31 +403,124 @@ void group2(byte aaa, byte bbb) {
 
   switch (aaa) {
     case 0b000: { //asl
+      byte temp = (o.is_accumulator == 0) ? val : cpu.A;
 
+      if ((temp >> 7) == 0x01) {
+        set_carry();
+      } else {
+        cpu.P &= ~C;
+      }
+      temp = temp << 1;
+      set_zero(temp);
+      set_negative(temp);
+      
+      if (o.is_accumulator != 0) {
+        cpu.A = temp;
+      } else {
+        mem[o.EA] = temp;
+      }
+      break;
     }
     case 0b001: {//rol
+      byte temp = (o.is_accumulator == 0) ? val : cpu.A;
 
+      if ((temp >> 7) == 0x01) {
+        set_carry();
+      } else {
+        cpu.P &= ~C;
+      }
+      temp = cpu.A << 1;
+      if ((cpu.P & C) == C) {
+        temp ++;
+      }
+      set_zero(temp);
+      set_negative(temp);
+
+      if (o.is_accumulator != 0) {
+        cpu.A = temp;
+      } else {
+        mem[o.EA] = temp;
+      }
+      break;
     }
     case 0b010: {//lsr
 
+      byte temp = (o.is_accumulator == 0) ? val : cpu.A;
+
+      if ((temp & 0x01) == 0x01) {
+        set_carry();
+      } else {
+        cpu.P &= ~C;
+      }
+
+      temp = temp >> 1;
+
+      if (o.is_accumulator != 0) {
+        cpu.A = temp;
+      } else {
+        mem[o.EA] = temp;
+      }
+      break;
     }
     case 0b011: {//ror
 
+      byte temp = (o.is_accumulator == 0) ? val : cpu.A;
+
+      byte wait = 0;
+      if ((temp & 0x01) == 0x01) {
+        wait = 0x01;
+      }
+      temp = temp >> 1;
+      temp += ((cpu.P & C) << 7);
+      if (wait == 0x01) { 
+        set_carry(); 
+      } else {
+        cpu.P &= ~C;
+      }
+
+      if (o.is_accumulator != 0) {
+        cpu.A = temp;
+      } else {
+        mem[o.EA] = temp;
+      }
+      break;
     }
     case 0b100: {//stx / txa   ?not sure
+      //if (bbb == 000) = txa
+      if (bbb == 0b000) {
+        cpu.A = cpu.X;
+        set_zero(cpu.A);
+        set_negative(cpu.A);
+        break;
+      }
+      //else stx
+      mem[o.EA] = cpu.X;
+      break;
 
     }
     case 0b101: {//ldx
+      cpu.X = mem[o.EA];
+      set_zero(cpu.X);
+      set_negative(cpu.X);
+      break;
 
     }
     case 0b110: {//dec
+      val--;
+      mem[o.EA] = (val);
+      set_zero(val);
+      set_negative(val);
+      break;
 
     }
     case 0b111: {//inc
-
+      val++;
+      mem[o.EA] = (val);
+      set_zero(val);
+      set_negative(val);
+      break;
     }
   }
-
 
 }
 void group3() {
@@ -494,7 +546,7 @@ void decode(byte op) {
         break;
 
       case 0b10:
-        group2();
+        group2(aaa, bbb);
         break;
 
       case 0b11:
