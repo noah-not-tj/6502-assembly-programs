@@ -494,7 +494,7 @@ void group2(byte aaa, byte bbb) {
 
     }
     case 0b101: {//ldx
-      cpu.X = mem[o.EA];
+      cpu.X = (o.is_immediate) ? o.value : mem[o.EA];
       set_zero(cpu.X);
       set_negative(cpu.X);
       break;
@@ -518,7 +518,7 @@ void group2(byte aaa, byte bbb) {
   }
 
 }
-void group3(aaa, bbb) {
+void group3(byte aaa, byte bbb) {
   Opcode o = {0};
   switch (bbb) {
     case 0b000: {  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
@@ -586,27 +586,35 @@ void group3(aaa, bbb) {
 
   switch(aaa) {
     case 0b000: { //SLO / ASO   = ASL + ORA
+      break;
 
     }
     case 0b001: { //SRE / LSE   = LSR + EOR
+      break;
 
     }
     case 0b010: { //RLA         = ROL + AND
+      break;
 
     }
     case 0b011: { //RRA         = ROR + ADC
+      break;
 
     }
     case 0b100: { //SAX         = STA + STX
+      break;
 
     }
     case 0b101: { //LAX         = LDA + LDX    #immediate = OAL / ATX,   Abs Y = LAS / LAR
+      break;
 
     }
     case 0b110: { //DCP         = DEC + CMP    #immediate = AXS / SBX
+      break;
 
     }
     case 0b111: { //ISC         = INC + SBC    #immediate = SBC / NOP
+      break;
 
     }
   }
@@ -656,6 +664,7 @@ void execute() {
   printf("A: %08b, X: %i, Y: %i,\n\n", cpu.A, cpu.X, cpu.Y);
   printf("NV BDIZC\n");
   printf("%08b\n\n", cpu.P);
+  printf("0x0300: %s\n\n", &mem[0x0300]);
 }
 
 
