@@ -582,7 +582,7 @@ void group3(byte aaa, byte bbb) {
     }
   }
   byte val = (o.is_immediate) ? o.value : read_byte(o.EA);
-  printf("value: %x", val);
+  printf("value: %x\n", val);
 
   switch(aaa) {
     case 0b000: { //SLO / ASO   = ASL + ORA
@@ -660,33 +660,72 @@ void ISLogic(byte op) {
 
 } 
 
+void signed_jump(byte n) {
+  if (n & 0x80) { // if it is negative
+    cpu.PC -= ((byte)(~n + 1));
+    return;
+  } else {
+    cpu.PC += n;
+    return;
+  }
+}
+
 void conditionals(byte aaa) {
   switch (aaa) {
     case 0b000: {  // negative clear
-      if ((cpu.P & N) == 0) {
-        byte n = read_next();
-        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+      byte n = read_next();
+      if ((cpu.P & N) == 0x00) {
+        printf("offset: %x\n",n);
+        signed_jump(n);
       }
       break;
     }
     case 0b001: {  // negative set
+      byte n = read_next();
       if ((cpu.P & N) != 0) {
-        byte n = read_next();
-        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+        signed_jump(n);
       }
       break;
     }
     case 0b010: {  // overflow clear
-      if ((cpu.P & O) == 0) {
-        byte n = read_next();
-        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+      byte n = read_next();
+      if ((cpu.P & V) == 0) {
+        signed_jump(n);
       }
       break;
     }
-    case 0b010: {  // overflow set
-      if ((cpu.P & O) != 0) {
-        byte n = read_next();
-        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+    case 0b011: {  // overflow set
+      byte n = read_next();
+      if ((cpu.P & V) != 0) {
+        signed_jump(n);
+      }
+      break;
+    }
+    case 0b100: {  // carry clear
+      byte n = read_next();
+      if ((cpu.P & C) == 0) {
+        signed_jump(n);
+      }
+      break;
+    }
+    case 0b101: {  // carry set
+      byte n = read_next();
+      if ((cpu.P & C) != 0) {
+        signed_jump(n);
+      }
+      break;
+    }
+    case 0b110: {  // zero clear
+      byte n = read_next();
+      if ((cpu.P & V) == 0) {
+        signed_jump(n);
+      }
+      break;
+    }
+    case 0b111: {  // zero set
+      byte n = read_next();
+      if ((cpu.P & C) != 0) {
+        signed_jump(n);
       }
       break;
     }
@@ -735,24 +774,23 @@ void decode(byte op) {
 void execute() {
   byte instruction = read_byte(cpu.PC++);
   decode(instruction);
-  printf("A: %08b, X: %i, Y: %i,\n\n", cpu.A, cpu.X, cpu.Y);
+  printf("----------------------------\n");
+  printf("A: %08b, X: %x, Y: %x\n\n", cpu.A, cpu.X, cpu.Y);
   printf("NV BDIZC\n");
   printf("%08b\n\n", cpu.P);
   printf("0x0300: %s\n\n", &mem[0x0300]);
-  printf("PC: %4x\n", cpu.PC);
+  printf("PC: %x\n", cpu.PC);
+  printf("SP: %x SP_VAL: %x\n", cpu.SP, mem[cpu.SP]);
+  printf("----------------------------\n");
 }
 
 
 int main(void) {
   init_memory();
   reset_cpu();
-//  while (mem[cpu.PC] != 0x00) {
- //   printf("----------------------------\n");
-//    execute();
- // };
- for (int i = 0; i < 50; i++) {
-  execute();
- }
+  while (mem[cpu.PC] != 0x00) {
+    execute();
+  };
 
 
  
