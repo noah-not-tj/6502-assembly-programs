@@ -647,9 +647,51 @@ void ISLogic(byte op) {
       cpu.PC = read_word(0xFFFE);
       break;
     }
+    case 0x40: { // RTI
+
+    }
+    case 0x60: { // RTS
+      cpu.P = read_word(--cpu.SP);
+      cpu.PC = read_word(--cpu.SP);
+      cpu.PC = (read_word(--cpu.SP) << 8) | cpu.PC;
+      break;
+    }
   }
 
 } 
+
+void conditionals(byte aaa) {
+  switch (aaa) {
+    case 0b000: {  // negative clear
+      if ((cpu.P & N) == 0) {
+        byte n = read_next();
+        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+      }
+      break;
+    }
+    case 0b001: {  // negative set
+      if ((cpu.P & N) != 0) {
+        byte n = read_next();
+        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+      }
+      break;
+    }
+    case 0b010: {  // overflow clear
+      if ((cpu.P & O) == 0) {
+        byte n = read_next();
+        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+      }
+      break;
+    }
+    case 0b010: {  // overflow set
+      if ((cpu.P & O) != 0) {
+        byte n = read_next();
+        cpu.PC = (((int) n ) > 0) ? cpu.PC += n : cpu.PC -= n;
+      }
+      break;
+    }
+  }
+}
 
 void decode(byte op) {
   printf("opcode recieved: %x\n",op);
@@ -679,6 +721,7 @@ void decode(byte op) {
         }
         else if (bbb == 4) {  //not sure yet
           //conditionals
+          conditionals(aaa);
         } else {
           group3(aaa, bbb);
         }
@@ -703,10 +746,13 @@ void execute() {
 int main(void) {
   init_memory();
   reset_cpu();
-  while (mem[cpu.PC] != 0x00) {
-    printf("----------------------------\n");
-    execute();
-  };
+//  while (mem[cpu.PC] != 0x00) {
+ //   printf("----------------------------\n");
+//    execute();
+ // };
+ for (int i = 0; i < 50; i++) {
+  execute();
+ }
 
 
  
