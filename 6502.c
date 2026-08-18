@@ -621,6 +621,36 @@ void group3(byte aaa, byte bbb) {
 
 }
 
+void ISLogic(byte op) {
+  //just direct opcode parsing
+  switch (op) {
+    case 0x4c: { //JMP ABSOLUTE
+      word add = read_next_word();
+      cpu.PC = add;
+      break;
+    }
+    case 0x6c: { //JMP INDIRECT
+      word vec_add = read_next_word();
+      byte high_add = (byte)((vec_add & 0xFF00) >> 4);
+      byte low_add  = (vec_add & 0x00FF == 0xFF) ? (byte)(0x00) : (byte)((vec_add & 0xFF00) >> 4);
+      word temp = read_byte(high_add) << 8;
+      temp += (read_byte(low_add));
+      cpu.PC = temp;
+      break;
+    }
+    case 0x00: {    //BRK
+      cpu.PC += 2;
+      mem[++cpu.SP] = (byte)(cpu.PC & 0x00FF);
+      mem[++cpu.SP] = (byte)((cpu.PC & 0xFF00) >> 4);
+      mem[++cpu.SP] = (cpu.P | B); 
+      cpu.P |= I;
+      cpu.PC = read_word(0xFFFE);
+      break;
+    }
+  }
+
+} 
+
 void decode(byte op) {
   printf("opcode recieved: %x\n",op);
   if ((op & 0x0f) == 0x8) {
@@ -643,11 +673,12 @@ void decode(byte op) {
         group2(aaa, bbb);
         break;
 
-      case 0b11:
-        if (bbb == 4) {
+      default:
+        if (op == 0x4c || op == 0x6c || op == 0x00) {
+           ISLogic(op);
+        }
+        else if (bbb == 4) {  //not sure yet
           //conditionals
-        } else if (bbb == 0 && (aaa & 0x04) >> 3 == 0x00) {
-          // I/S logic
         } else {
           group3(aaa, bbb);
         }
@@ -665,6 +696,7 @@ void execute() {
   printf("NV BDIZC\n");
   printf("%08b\n\n", cpu.P);
   printf("0x0300: %s\n\n", &mem[0x0300]);
+  printf("PC: %4x\n", cpu.PC);
 }
 
 
