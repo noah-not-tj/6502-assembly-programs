@@ -717,14 +717,14 @@ void conditionals(byte aaa) {
     }
     case 0b110: {  // zero clear
       byte n = read_next();
-      if ((cpu.P & V) == 0) {
+      if ((cpu.P & Z) == 0) {
         signed_jump(n);
       }
       break;
     }
     case 0b111: {  // zero set
       byte n = read_next();
-      if ((cpu.P & C) != 0) {
+      if ((cpu.P & Z) != 0) {
         signed_jump(n);
       }
       break;
