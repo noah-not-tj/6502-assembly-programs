@@ -1,2 +1,6 @@
 blah
 Makefile
+vasm/*
+vasm.tar.gz
+input.s
+output.bin

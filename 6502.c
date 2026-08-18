@@ -46,20 +46,15 @@ void init_memory(){
   }
 
   //sus
-  mem[0xFFFC] = 0x00;  
-  mem[0xFFFD] = 0x06;  
-  
-  mem[0x0600] = 0xa9; //lda immediate
-  mem[0x0601] = 0x55; //immediate
-  mem[0x0602] = 0x6a; //ror accumulator
-  mem[0x0603] = 0x6a; //ror accumulator
-  mem[0x0604] = 0x6a; //ror accumulator
-  mem[0x0605] = 0x6a; //ror accumulator
 
+  FILE *f = fopen("output.bin", "r");
+  if (f == NULL) { }
+  size_t bytes_read = fread(mem, sizeof(byte), MAX_MEMORY, f);  
+  if (bytes_read < MAX_MEMORY) {
+    mem[0x0600] = 0x00;
+    return;
+  }
 
-//expected: x = 1, a = 0
-
-  
   return;
   
 }
@@ -193,7 +188,6 @@ void SB2(byte op) {
       break;
     case 0x0e: //nop
       break;
-
   }
   cycle(2);
   //printf("opcode recieved: %x\n", (op & 0xf0) >> 4);
@@ -215,7 +209,7 @@ void group1(byte aaa, byte bbb) {
     case 0b000: {  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
       byte zp = read_next() + cpu.X;
       word low = read_byte(zp);
-      word high = read_byte(zp + 1);
+      word high = read_byte((byte)(zp + 1));
       o.EA = (high << 8) | low;      
       break;
     }
@@ -400,6 +394,7 @@ void group2(byte aaa, byte bbb) {
     }
   }
   byte val = o.is_immediate ? o.value : read_byte(o.EA); 
+  printf("value: %x\n",val);
 
   switch (aaa) {
     case 0b000: { //asl
@@ -523,7 +518,98 @@ void group2(byte aaa, byte bbb) {
   }
 
 }
-void group3() {
+void group3(aaa, bbb) {
+  Opcode o = {0};
+  switch (bbb) {
+    case 0b000: {  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
+      byte zp = read_next() + cpu.X;
+      word low = read_byte(zp);
+      word high = read_byte((byte)(zp + 1));
+      o.EA = (high << 8) | low;      
+      break;
+    }
+    case 0b001: {  //zero page         $zp
+      o.EA = read_next();
+      break;
+    }
+    case 0b010: {  //immediate         #immediate
+      if (aaa == 0b100) {
+        // supposed to XAA or ANE but i'm not gonna impliment
+        o.is_immediate = 0xff;
+        o.value = 0x00;
+        break;
+      }
+      o.value = read_next();
+      o.is_immediate = 0xff;
+      break;
+    }
+    case 0b011: {  //Absolue           $absolute
+      o.EA = read_next_word();
+      break;
+    }  
+    case 0b100: {  //indirect indexed  (Indirect),Y    (zp,low zp+1,high  )+y
+      byte zp = read_next();
+      byte low = read_byte(zp);
+      byte high = read_byte(zp + 1);      
+      o.EA = ((high << 8) | low) + (word)cpu.Y;
+      break;
+    }
+    
+    case 0b101: {  //zero page,X       $zp,X
+      if (aaa == 0b101 || aaa == 0b100) {
+        byte zp = read_next() + cpu.Y;
+        o.EA = (word)zp; 
+        break;
+      }
+      byte zp = read_next() + cpu.X;
+      o.EA = (word)zp; 
+      break;
+    }
+    case 0b110: {  //Absolute,Y        $abs,Y
+      word address = read_next_word();
+      o.EA = address + (word)cpu.Y;
+      break;
+    }
+    case 0b111: {  //Absolute,X        $abs,X
+      if (aaa == 0b101) {
+        word address = read_next_word();
+        o.EA = address + (word)cpu.Y;
+        break; 
+      }
+      word address = read_next_word();
+      o.EA = address + (word)cpu.X;
+      break;
+    }
+  }
+  byte val = (o.is_immediate) ? o.value : read_byte(o.EA);
+  printf("value: %x", val);
+
+  switch(aaa) {
+    case 0b000: { //SLO / ASO   = ASL + ORA
+
+    }
+    case 0b001: { //SRE / LSE   = LSR + EOR
+
+    }
+    case 0b010: { //RLA         = ROL + AND
+
+    }
+    case 0b011: { //RRA         = ROR + ADC
+
+    }
+    case 0b100: { //SAX         = STA + STX
+
+    }
+    case 0b101: { //LAX         = LDA + LDX    #immediate = OAL / ATX,   Abs Y = LAS / LAR
+
+    }
+    case 0b110: { //DCP         = DEC + CMP    #immediate = AXS / SBX
+
+    }
+    case 0b111: { //ISC         = INC + SBC    #immediate = SBC / NOP
+
+    }
+  }
 
 }
 
@@ -555,7 +641,7 @@ void decode(byte op) {
         } else if (bbb == 0 && (aaa & 0x04) >> 3 == 0x00) {
           // I/S logic
         } else {
-          group3();
+          group3(aaa, bbb);
         }
         break;
     }
