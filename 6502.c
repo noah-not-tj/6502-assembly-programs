@@ -28,6 +28,8 @@ byte mem[MAX_MEMORY];
 void set_zero(byte x) {
   if (x == 0) {
     cpu.P |= Z;
+  } else {
+    cpu.P &= ~Z;
   }
   return;
 }
@@ -35,6 +37,8 @@ void set_zero(byte x) {
 void set_negative(byte x) {
   if (x >> 7 == 0x01) {
     cpu.P |= N;
+  } else {
+    cpu.P &= ~N;
   }
   return;
 }
@@ -518,15 +522,21 @@ void group2(byte aaa, byte bbb) {
   }
 
 }
-void group3(byte aaa, byte bbb) {
+void group3(byte aaa, byte bbb, byte cc) {
   Opcode o = {0};
   switch (bbb) {
     case 0b000: {  //indexed indrect   (Indirect,X)    zp+x = low, zp+x+1 = high
+      if (aaa == 0b111 || aaa == 0b110) { // #immediate for cpx and cpy
+        o.is_immediate = 0xff;
+        o.value = read_next();
+        break;
+      }
       byte zp = read_next() + cpu.X;
       word low = read_byte(zp);
       word high = read_byte((byte)(zp + 1));
       o.EA = (high << 8) | low;      
       break;
+
     }
     case 0b001: {  //zero page         $zp
       o.EA = read_next();
@@ -609,11 +619,34 @@ void group3(byte aaa, byte bbb) {
       break;
 
     }
-    case 0b110: { //DCP         = DEC + CMP    #immediate = AXS / SBX
+    case 0b110: { //CPY
+      if (cc == 0b00) {
+        if (cpu.Y == val) {
+          cpu.P |= Z;
+        } else { cpu.P &= ~Z; } 
+
+        if (cpu.Y >= val) {
+          cpu.P |= C;
+        } else { cpu.P &= ~C; } 
+        set_negative(cpu.Y);
+        break;
+      }
+      //DCP         = DEC + CMP    #immediate = AXS / SBX
       break;
 
     }
     case 0b111: { //ISC         = INC + SBC    #immediate = SBC / NOP
+      if (cc == 0b00) {
+        if (cpu.X == val) {
+          cpu.P |= Z;
+        } else { cpu.P &= ~Z; } 
+
+        if (cpu.X >= val) {
+          cpu.P |= C;
+        } else { cpu.P &= ~C; } 
+        set_negative(cpu.X);
+        break;
+      }
       break;
 
     }
@@ -762,7 +795,7 @@ void decode(byte op) {
           //conditionals
           conditionals(aaa);
         } else {
-          group3(aaa, bbb);
+          group3(aaa, bbb, cc);
         }
         break;
     }
@@ -788,10 +821,12 @@ void execute() {
 int main(void) {
   init_memory();
   reset_cpu();
-  while (mem[cpu.PC] != 0x00) {
+//  while (mem[cpu.PC] != 0x00) {
+//    execute();
+//  };
+  for (int i= 0; i < 62; i++) {
     execute();
-  };
-
+  }
 
  
   return 0;
